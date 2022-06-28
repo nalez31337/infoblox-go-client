@@ -48,6 +48,20 @@ func BuildNetworkFromRef(ref string) (*Network, error) {
 	return newNet, nil
 }
 
+func BuildNetworkContainerFromRef(ref string) (*NetworkContainer, error) {
+	// networkcontainer/ZG5zLm5ldHdvcmtfY29udGFpbmVyJDEwLjAuMS4wLzI0LzA:10.0.1.0/24/default
+	r := regexp.MustCompile(`networkcontainer/\w+:(\d+\.\d+\.\d+\.\d+/\d+)/(.+)`)
+	m := r.FindStringSubmatch(ref)
+
+	if m == nil {
+		return nil, fmt.Errorf("CIDR format not matched")
+	}
+
+	newCont := NewNetworkContainer(m[2], m[1], false, "", nil)
+	newCont.Ref = ref
+	return newCont, nil
+}
+
 func GetIPAddressFromRef(ref string) string {
 	// fixedaddress/ZG5zLmJpbmRfY25h:12.0.10.1/external
 	r := regexp.MustCompile(`fixedaddress/\w+:(\d+\.\d+\.\d+\.\d+)/.+`)
@@ -100,4 +114,30 @@ func BuildIPv6NetworkFromRef(ref string) (*Network, error) {
 	newNet.Ref = ref
 
 	return newNet, nil
+}
+
+func BuildIPv6NetworkContainerFromRef(ref string) (*NetworkContainer, error) {
+	// ipv6networkcontainer/5ldHdvcmskMTEuMC4:abcd%3A%3A/80/external
+	r := regexp.MustCompile(`ipv6networkcontainer/[^:]+:(([^\/]+)\/\d+)\/(.+)`)
+	m := r.FindStringSubmatch(ref)
+
+	if m == nil {
+		return nil, fmt.Errorf("CIDR format not matched")
+	}
+
+	cidr, err := url.QueryUnescape(m[1])
+	if err != nil {
+		return nil, fmt.Errorf(
+			"cannot extract network CIDR information from the reference '%s': %s",
+			ref, err.Error())
+	}
+
+	if _, _, err = net.ParseCIDR(cidr); err != nil {
+		return nil, fmt.Errorf("CIDR format not matched")
+	}
+
+	newCont := NewNetworkContainer(m[3], cidr, true, "", nil)
+	newCont.Ref = ref
+
+	return newCont, nil
 }
