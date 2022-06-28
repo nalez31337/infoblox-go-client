@@ -17,6 +17,30 @@ func (objMgr *ObjectManager) CreateNetworkContainer(netview string, cidr string,
 	return container, nil
 }
 
+func (objMgr *ObjectManager) AllocateNetworkContainer(
+	netview string,
+	cidr string,
+	isIPv6 bool,
+	prefixLen uint,
+	comment string,
+	eas EA) (network *NetworkContainer, err error) {
+
+	network = nil
+	cidr = fmt.Sprintf("func:nextavailablenetwork:%s,%s,%d", cidr, netview, prefixLen)
+	networkContainerReq := NewNetworkContainer(netview, cidr, isIPv6, comment, eas)
+
+	ref, err := objMgr.connector.CreateObject(networkContainerReq)
+	if err == nil {
+		if isIPv6 {
+			network, err = BuildIPv6NetworkContainerFromRef(ref)
+		} else {
+			network, err = BuildNetworkContainerFromRef(ref)
+		}
+	}
+
+	return
+}
+
 // TODO normalize IPv4 and IPv6 addresses
 func (objMgr *ObjectManager) GetNetworkContainer(netview string, cidr string, isIPv6 bool, eaSearch EA) (*NetworkContainer, error) {
 	var res []NetworkContainer
